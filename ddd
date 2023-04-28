@@ -1,0 +1,117 @@
+CODAI:
+```c++
+  #include 
+  #include 
+  #include 
+  #include 
+  #include 
+  #include 
+
+  #define DHTPIN 4
+  #define DHTTYPE DHT11
+
+  const char* ssid = "your_SSID";
+  const char* password = "your_PASSWORD";
+
+  DHT dht(DHTPIN, DHTTYPE);
+  WebServer server(80);
+
+  std::vector tempHistory;
+  std::vector humidityHistory;
+
+  void setup() {
+    Serial.begin(115200);
+    dht.begin();
+
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(1000);
+      Serial.println("Connecting to WiFi...");
+    }
+
+    server.on("/", handleRoot);
+    server.begin();
+  }
+
+  void loop() {
+    server.handleClient();
+  }
+
+  void handleRoot() {
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+
+    tempHistory.push_back(t);
+    humidityHistory.push_back(h);
+
+    String html = generateHtml(h, t);
+    server.send(200, "text/html", html);
+  }
+
+  String generateHtml(float h, float t) {
+    String tempStats = generateStats("Temperature", tempHistory);
+    String humidityStats = generateStats("Humidity", humidityHistory);
+
+    return String("body{font-family: Arial, sans-serif;}table{width:100%;border-collapse: collapse;}td, th{border: 1px solid black;padding: 8px;text-align: center;}th{background-color: #f2f2f2;}") +
+           String("Temperature: ") + String(t) + String(" &#8451;") +
+           String("Humidity: ") + String(h) + String(" %") +
+           String("Temperature and Humidity Analytics") +
+           String("") +
+           String("MinMaxAverage") +
+           tempStats + humidityStats +
+           String("") +
+           String("");
+  }
+
+  String generateStats(const String& label, const std::vector& data) {
+    float min = *min_element(data.begin(), data.end());
+    float max = *max_element(data.begin(), data.end());
+    float avg = accumulate(data.begin(), data.end(), 0.0) / data.size();
+
+    String statsRow = String("") +
+                      String("") + label + String("") +
+                      String("") + String(min) + String("") +
+                      String("") + String(max) + String("") +
+                      String("") + String(avg) + String("") +
+                      String("");
+    return statsRow;
+  }
+```
+```html
+  
+    
+      
+        body {
+          font-family: Arial, sans-serif;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        td, th {
+          border: 1px solid black;
+          padding: 8px;
+          text-align: center;
+        }
+        th {
+          background-color: #f2f2f2;
+        }
+      
+    
+    
+      Temperature: <TEMPERATURE> &#8451;
+      Humidity: <HUMIDITY> %
+      Temperature and Humidity Analytics
+      
+        
+          
+          Min
+          Max
+          Average
+        
+        <STATS_ROWS>
+      
+    
+  
+```
+DONE.
